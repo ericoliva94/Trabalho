@@ -1,0 +1,8 @@
+{
+  "name": "financas-do-casal",
+  "version": "1.0.0",
+  "description": "Controle financeiro do casal, com dados compartilhados e sem login.",
+  "private": true,
+  "scripts": { "start": "node server.js", "test": "node tests/engine.test.js && node tests/sync.test.js" },
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finanças do Casal</title>
+<meta name="description" content="Controle financeiro do casal: gastos, contas fixas, dívidas, metas e dashboard. Sem login.">
+<meta name="theme-color" content="#0b1412">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finanças">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <h1 id="title">Visão Geral</h1>
+  <button class="sync" id="sync" aria-label="Estado da sincronização"><i></i><span></span></button>
+</div></header>
+<main id="app"></main>
+<nav class="bottom" id="nav" aria-label="Navegação principal"></nav>
+<div id="modal" class="modal" hidden></div>
+<div id="toast" class="toast" hidden></div>
+<script src="engine.js"></script>
+<script src="merge.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
