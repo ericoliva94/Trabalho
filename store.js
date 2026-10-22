@@ -9,7 +9,24 @@
   const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 
   // ---------- dados de exemplo (vindos da planilha original) ----------
+  // exemplos extras só na versão de demonstração (window.DEMO), para a apresentação não abrir vazia
+  function demoExtras(st) {
+    st.esp = [['2026-11-02', 'Mercado', 420, 'Cartão Nubank', 'Compras da semana'], ['2026-11-03', 'Farmácia/Saúde', 89.9, 'Pix', ''],
+      ['2026-11-04', 'Lazer/Restaurantes', 135, 'Cartão Inter', 'Jantar'], ['2026-11-06', 'iFood/Delivery', 62.5, 'Cartão Nubank', ''],
+      ['2026-11-08', 'Roupas/Beleza', 210, 'Débito', '']].map(([date, cat, val, pay, desc], i) => ({ id: 'demo-es' + i, date, cat, val, pay, desc }));
+    st.eu.push({ id: 'demo-eu0', date: '2026-11-07', cat: 'Combustível/Estacionamento', val: 240, pay: 'Débito', desc: '' },
+      { id: 'demo-eu1', date: '2026-11-09', cat: 'Lazer/Restaurantes', val: 180, pay: 'Cartão Nubank', desc: 'Almoço com amigos' });
+    const g = [[30000, 12500], [8000, 3200], [8000, 4800], [5000, 1000]];
+    st.goals.forEach((x, i) => { x.target = g[i][0]; x.saved = g[i][1]; });
+    st.goals[2].name = 'Viagem dos sonhos';
+    st.sal['2026-12'] = { eu: 5500, esp: 4400 };
+    return st;
+  }
+
   function defaults() {
+    return root.DEMO ? demoExtras(baseDefaults()) : baseDefaults();
+  }
+  function baseDefaults() {
     const eu = [['Condomínio', 900, 'Pix', ''], ['Luz', 550, 'Pix', ''], ['TotalPass', 199.9, 'Cartão Inter', ''], ['Internet', 185, 'Pix', ''],
       ['Empréstimo', 437.97, 'Pix', ''], ['Outros', 500, 'Pix', 'Cartão de Crédito Porto'], ['Mercado', 870, '', '']]
       .map(([cat, val, pay, desc], i) => ({ id: 'seed-eu' + i, date: '2026-11-01', cat, val, pay, desc }));

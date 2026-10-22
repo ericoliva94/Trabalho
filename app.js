@@ -34,6 +34,20 @@
     clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2200);
   }
 
+  const DEMO = !!window.DEMO;   // versão de demonstração: sem servidor
+
+  /** Confirmação dentro da página (os diálogos nativos são bloqueados em alguns visualizadores). */
+  function ask(msg, o) {
+    o = o || {};
+    return new Promise((resolve) => {
+      const d = document.createElement('div'); d.className = 'modal'; d.style.zIndex = 70;
+      d.innerHTML = `<div class="sheet" role="alertdialog" aria-modal="true"><h3>${esc(msg)}</h3><div class="actions"><span class="sp"></span>
+        ${o.info ? '' : '<button class="btn" data-r="0">Cancelar</button>'}<button class="btn ${o.danger ? 'danger' : 'primary'}" data-r="1">${esc(o.ok || 'OK')}</button></div></div>`;
+      d.addEventListener('click', (e) => { const r = e.target.dataset && e.target.dataset.r; if (r != null || e.target === d) { d.remove(); resolve(r === '1'); } });
+      document.body.appendChild(d); d.querySelector('[data-r="1"]').focus();
+    });
+  }
+
   // ---------- ícones ----------
   const IC = {
     home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>',
@@ -69,7 +83,7 @@
     form.addEventListener('click', (e) => {
       const x = e.target.dataset.x;
       if (x === 'cancel') close();
-      if (x === 'del' && confirm('Excluir este item?')) { o.onDelete(); close(); }
+      if (x === 'del') ask('Excluir este item?', { ok: 'Excluir', danger: true }).then((yes) => { if (yes) { o.onDelete(); close(); } });
     });
     if (o.onChange) form.addEventListener('change', (e) => {
       if (!o.onChange(e.target.name, read())) return;
@@ -346,7 +360,7 @@
       return `<section class="card"><h2>Quem usa o app</h2>
         <div class="fields"><label class="f">Nome 1<input data-bind="name" data-k="eu" value="${esc(s.names.eu)}"></label><label class="f">Nome 2<input data-bind="name" data-k="esp" value="${esc(s.names.esp)}"></label>
         <label class="f full">Neste aparelho eu sou<select data-bind="me"><option value="Eu"${(Store.prefs.get().me || 'Eu') === 'Eu' ? ' selected' : ''}>${esc(s.names.eu)}</option><option value="Esposa"${Store.prefs.get().me === 'Esposa' ? ' selected' : ''}>${esc(s.names.esp)}</option></select></label></div></section>
-        <section class="card"><h2>Compartilhar dados <span class="chip ${store.status === 'ok' ? '' : 'amber'}">${state}</span></h2>
+        ${DEMO ? `<section class="card"><h2>Compartilhar dados <span class="chip mute">Demonstração</span></h2><p class="note">Nesta demonstração os dados ficam só neste navegador. Na versão com servidor, um link do casal liga os dois celulares e os lançamentos aparecem para os dois em segundos, sem login.</p></section>` : `<section class="card"><h2>Compartilhar dados <span class="chip ${store.status === 'ok' ? '' : 'amber'}">${state}</span></h2>
         ${store.code ? `<p class="note">Mande este link para a outra pessoa abrir no celular. Quem tiver o link acessa os dados — não precisa de login, então não divulgue.</p>
           <div class="code">${esc(link)}</div>
           <div class="actions" style="margin-top:8px"><button class="btn" data-act="copylink">Copiar link</button>${navigator.share ? '<button class="btn primary" data-act="sharelink">Enviar</button>' : ''}<span class="sp"></span></div>
@@ -355,12 +369,12 @@
         : `<p class="note">Os dados ficam só neste aparelho. Para usar em dois celulares, crie um código do casal e abra o link no outro aparelho.</p>
           <button class="btn primary block" data-act="create">Criar link do casal</button>
           <button class="btn block" style="margin-top:10px" data-act="join">Já tenho um código</button>`}
-        ${store.error && store.code ? `<p class="note down">Último erro: ${esc(store.error)}</p>` : ''}</section>
+        ${store.error && store.code ? `<p class="note down">Último erro: ${esc(store.error)}</p>` : ''}</section>`}
         <section class="card"><h2>Instalar no celular</h2><p class="note"><b>iPhone/iPad:</b> abra o link no Safari → botão Compartilhar → <i>Adicionar à Tela de Início</i>.<br><b>Android:</b> menu do Chrome → <i>Instalar app</i>.</p></section>`;
     },
     backup() {
       return `<section class="card"><h2>Backup e dados</h2><p class="note">Exporte um arquivo de segurança ou restaure um anterior. Importar substitui os dados atuais (e vale para os dois aparelhos, se compartilhado).</p>
-        <button class="btn block" data-act="export">Exportar backup (.json)</button>
+        ${DEMO ? '' : '<button class="btn block" data-act="export">Exportar backup (.json)</button>'}
         <label class="btn block" style="margin-top:10px;text-align:center">Importar backup<input type="file" accept="application/json,.json" data-bind="import" hidden></label>
         <button class="btn danger block" style="margin-top:10px" data-act="clear">Apagar dados de exemplo e começar do zero</button></section>`;
     },
@@ -436,25 +450,26 @@
     theme: (el) => { Store.prefs.set({ theme: el.dataset.v }); render(); },
     create: async () => {
       const code = Store.newCode(); await store.createCouple(code);
-      if (store.status !== 'ok') { store.leaveCouple(); alert('Não foi possível falar com o servidor. Abra o app pelo endereço do site (não pelo arquivo) e tente de novo.'); } else toast('Link criado — envie para a outra pessoa');
+      if (store.status !== 'ok') { store.leaveCouple(); ask('Não foi possível falar com o servidor. Abra o app pelo endereço do site e tente de novo.', { info: true }); } else toast('Link criado — envie para a outra pessoa');
       render();
     },
     join: async () => {
-      const raw = prompt('Cole o link (ou o código) do casal:'); if (!raw) return;
-      await joinWith((raw.match(/[a-z0-9]{16,64}/) || [''])[0]);
+      sheet({ title: 'Entrar no casal', values: { raw: '' }, focus: true, fields: [{ name: 'raw', label: 'Cole o link (ou o código) do casal', full: true }],
+        validate: (v) => (/[a-z0-9]{16,64}/.test(v.raw) ? '' : 'Link ou código inválido'),
+        onSave: (v) => joinWith(v.raw.match(/[a-z0-9]{16,64}/)[0]) });
     },
-    copylink: () => { const l = `${location.origin}${location.pathname}#c=${store.code}`; (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => toast('Link copiado'), () => prompt('Copie o link:', l)); },
+    copylink: () => { const l = `${location.origin}${location.pathname}#c=${store.code}`; (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => toast('Link copiado'), () => toast('Selecione o link acima e copie')); },
     sharelink: () => navigator.share({ title: 'Finanças do Casal', text: 'Abra para usar nosso controle financeiro:', url: `${location.origin}${location.pathname}#c=${store.code}` }).catch(() => {}),
     syncnow: async () => { await store.sync(); toast(store.status === 'ok' ? 'Sincronizado' : 'Sem conexão'); render(); },
-    leave: () => { if (confirm('Parar de compartilhar? Os dados continuam neste aparelho, mas deixam de ser enviados.')) { store.leaveCouple(); render(); } },
+    leave: () => ask('Parar de compartilhar? Os dados continuam neste aparelho, mas deixam de ser enviados.', { ok: 'Parar', danger: true }).then((yes) => { if (yes) { store.leaveCouple(); render(); } }),
     export: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([store.exportJSON()], { type: 'application/json' }));
       a.download = `financas-casal-${today()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); },
-    clear: () => { if (confirm('Apagar lançamentos, contas fixas, dívidas e salários? Categorias, cartões e metas ficam.')) { store.clearData(); toast('Dados apagados'); } },
+    clear: () => ask('Apagar lançamentos, contas fixas, dívidas e salários? Categorias, cartões e metas ficam.', { ok: 'Apagar', danger: true }).then((yes) => { if (yes) { store.clearData(); toast('Dados apagados'); } }),
   };
   async function joinWith(code) {
     if (!code) { toast('Código inválido'); return; }
-    if (!confirm('Entrar neste casal? Os dados deste aparelho serão substituídos pelos compartilhados.')) return;
-    try { await store.joinCouple(code); toast('Conectado!'); go('home'); } catch (e) { alert(String(e.message || e)); }
+    if (!(await ask('Entrar neste casal? Os dados deste aparelho serão substituídos pelos compartilhados.', { ok: 'Entrar' }))) return;
+    try { await store.joinCouple(code); toast('Conectado!'); go('home'); } catch (e) { ask(String(e.message || e), { info: true }); }
   }
   document.addEventListener('click', (e) => {
     const nav = e.target.closest('[data-nav]'); if (nav) return go(nav.dataset.nav);
@@ -471,8 +486,9 @@
     else if (b === 'me') { Store.prefs.set({ me: t.value }); toast('Salvo'); }
     else if (b === 'list') store.put('cfg:lists', { ...s.lists, [t.dataset.k]: t.value.split('\n').map((x) => x.trim()).filter(Boolean) });
     else if (b === 'import') { const f = t.files[0]; if (!f) return;
-      if (!confirm('Importar substitui os dados atuais. Continuar?')) { t.value = ''; return; }
-      f.text().then((x) => { store.importJSON(x); toast('Backup importado'); }).catch((err) => alert(String(err.message || err))); }
+      ask('Importar substitui os dados atuais. Continuar?', { ok: 'Importar', danger: true }).then((yes) => {
+        t.value = ''; if (!yes) return;
+        f.text().then((x) => { store.importJSON(x); toast('Backup importado'); }).catch((err) => ask(String(err.message || err), { info: true })); }); }
     t.blur(); render();
   });
 
@@ -480,8 +496,8 @@
   store.onChange(render);
   const m = location.hash.match(/c=([a-z0-9]{16,64})/);
   render();
-  if (m) { history.replaceState(null, '', location.pathname); if (m[1] !== store.code) setTimeout(() => joinWith(m[1]), 300); }
+  if (m && !DEMO) { history.replaceState(null, '', location.pathname); if (m[1] !== store.code) setTimeout(() => joinWith(m[1]), 300); }
   if (store.code) { store.sync(); }
   store.startPolling();
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!DEMO && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
